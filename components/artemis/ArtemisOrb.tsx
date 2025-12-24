@@ -362,24 +362,6 @@ export function ArtemisOrb({ size = 200, style }: ArtemisOrbProps) {
 
     return (
         <View style={[styles.container, { width: size, height: size }, style]}>
-            {/* Outer Glow Layer */}
-            <Animated.View style={[styles.glowLayer, glowAnimatedStyle]}>
-                <View
-                    style={[
-                        styles.glow,
-                        {
-                            width: size * 1.5,
-                            height: size * 1.5,
-                            backgroundColor: orbColors.deepPurple,
-                            shadowColor: orbColors.deepPurple,
-                            shadowOffset: { width: 0, height: 0 },
-                            shadowOpacity: 0.8,
-                            shadowRadius: size * 0.4,
-                        }
-                    ]}
-                />
-            </Animated.View>
-
             {/* Main Orb Container */}
             <Animated.View style={[styles.orbContainer, containerAnimatedStyle]}>
                 <Svg
@@ -388,138 +370,132 @@ export function ArtemisOrb({ size = 200, style }: ArtemisOrbProps) {
                     viewBox="0 0 100 100"
                 >
                     <Defs>
-                        {/* Main purple gradient */}
+                        {/* Main orb gradient - deep purple core */}
                         <RadialGradient id="coreGradient" cx="50%" cy="50%" r="50%">
-                            <Stop offset="0%" stopColor={orbColors.lightPurple} stopOpacity="0.9" />
-                            <Stop offset="40%" stopColor={orbColors.mediumPurple} stopOpacity="0.8" />
-                            <Stop offset="70%" stopColor={orbColors.deepPurple} stopOpacity="0.9" />
-                            <Stop offset="100%" stopColor="#1A1025" stopOpacity="1" />
+                            <Stop offset="0%" stopColor={orbColors.lightPurple} stopOpacity="0.4" />
+                            <Stop offset="30%" stopColor={orbColors.mediumPurple} stopOpacity="0.6" />
+                            <Stop offset="60%" stopColor={orbColors.deepPurple} stopOpacity="0.85" />
+                            <Stop offset="100%" stopColor="#0D0815" stopOpacity="1" />
                         </RadialGradient>
 
-                        {/* Blue accent gradient */}
-                        <LinearGradient id="blueAccent" x1="0%" y1="0%" x2="100%" y2="100%">
-                            <Stop offset="0%" stopColor={orbColors.electricBlue} stopOpacity="0.8" />
-                            <Stop offset="50%" stopColor={orbColors.lightBlue} stopOpacity="0.5" />
-                            <Stop offset="100%" stopColor={orbColors.mediumPurple} stopOpacity="0.3" />
-                        </LinearGradient>
-
-                        {/* Warm accent gradient */}
-                        <LinearGradient id="warmAccent" x1="0%" y1="100%" x2="100%" y2="0%">
-                            <Stop offset="0%" stopColor={orbColors.warmAccent} stopOpacity="0.7" />
-                            <Stop offset="50%" stopColor={orbColors.softGold} stopOpacity="0.4" />
-                            <Stop offset="100%" stopColor={orbColors.lightPurple} stopOpacity="0.2" />
-                        </LinearGradient>
-
-                        {/* Glass highlight gradient */}
-                        <LinearGradient id="glassHighlight" x1="0%" y1="0%" x2="100%" y2="100%">
-                            <Stop offset="0%" stopColor={orbColors.glassWhite} stopOpacity="0.6" />
-                            <Stop offset="50%" stopColor={orbColors.glassHighlight} stopOpacity="0.2" />
-                            <Stop offset="100%" stopColor="transparent" stopOpacity="0" />
-                        </LinearGradient>
-
-                        {/* Inner glow */}
-                        <RadialGradient id="innerGlow" cx="40%" cy="40%" r="60%">
-                            <Stop offset="0%" stopColor={orbColors.lightPurple} stopOpacity="0.6" />
+                        {/* Glass depth gradient - creates 3D sphere illusion */}
+                        <RadialGradient id="glassDepth" cx="35%" cy="35%" r="65%">
+                            <Stop offset="0%" stopColor={orbColors.lightPurple} stopOpacity="0.5" />
+                            <Stop offset="40%" stopColor={orbColors.mediumPurple} stopOpacity="0.2" />
                             <Stop offset="100%" stopColor="transparent" stopOpacity="0" />
                         </RadialGradient>
 
-                        {/* Purple ribbon gradient */}
-                        <LinearGradient id="ribbonPurple" x1="0%" y1="0%" x2="100%" y2="100%">
-                            <Stop offset="0%" stopColor={orbColors.lightPurple} stopOpacity="0.9" />
-                            <Stop offset="30%" stopColor={orbColors.mediumPurple} stopOpacity="0.7" />
-                            <Stop offset="70%" stopColor={orbColors.deepPurple} stopOpacity="0.8" />
-                            <Stop offset="100%" stopColor={orbColors.electricBlue} stopOpacity="0.6" />
+                        {/* Inner glow - soft center light */}
+                        <RadialGradient id="innerGlow" cx="50%" cy="50%" r="40%">
+                            <Stop offset="0%" stopColor={orbColors.lightPurple} stopOpacity="0.7" />
+                            <Stop offset="50%" stopColor={orbColors.mediumPurple} stopOpacity="0.3" />
+                            <Stop offset="100%" stopColor="transparent" stopOpacity="0" />
+                        </RadialGradient>
+
+                        {/* Top highlight - glass reflection */}
+                        <LinearGradient id="topHighlight" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <Stop offset="0%" stopColor="white" stopOpacity="0.5" />
+                            <Stop offset="30%" stopColor="white" stopOpacity="0.2" />
+                            <Stop offset="100%" stopColor="transparent" stopOpacity="0" />
                         </LinearGradient>
+
+                        {/* Secondary highlight */}
+                        <LinearGradient id="secondaryHighlight" x1="100%" y1="100%" x2="0%" y2="0%">
+                            <Stop offset="0%" stopColor={orbColors.electricBlue} stopOpacity="0.3" />
+                            <Stop offset="50%" stopColor={orbColors.lightBlue} stopOpacity="0.1" />
+                            <Stop offset="100%" stopColor="transparent" stopOpacity="0" />
+                        </LinearGradient>
+
+                        {/* Edge rim light */}
+                        <RadialGradient id="rimLight" cx="50%" cy="50%" r="50%">
+                            <Stop offset="85%" stopColor="transparent" stopOpacity="0" />
+                            <Stop offset="95%" stopColor={orbColors.lightPurple} stopOpacity="0.4" />
+                            <Stop offset="100%" stopColor={orbColors.mediumPurple} stopOpacity="0.6" />
+                        </RadialGradient>
+
+                        {/* Subtle blue accent rim */}
+                        <RadialGradient id="blueRim" cx="70%" cy="70%" r="50%">
+                            <Stop offset="80%" stopColor="transparent" stopOpacity="0" />
+                            <Stop offset="100%" stopColor={orbColors.electricBlue} stopOpacity="0.3" />
+                        </RadialGradient>
                     </Defs>
 
-                    {/* Base orb - dark core */}
+                    {/* Base orb - dark core with gradient */}
                     <Circle
                         cx="50"
                         cy="50"
-                        r="45"
+                        r="46"
                         fill="url(#coreGradient)"
                     />
 
-                    {/* Inner glow */}
-                    <Circle
-                        cx="45"
-                        cy="45"
-                        r="35"
-                        fill="url(#innerGlow)"
-                    />
-
-                    {/* Flowing ribbons - main visual element */}
-                    <G>
-                        {/* Outer ribbon - purple to blue */}
-                        <Path
-                            d={ribbonPaths.flow1}
-                            fill="none"
-                            stroke="url(#ribbonPurple)"
-                            strokeWidth="3"
-                            strokeLinecap="round"
-                            opacity={0.8}
-                        />
-
-                        {/* Secondary ribbon - blue accent */}
-                        <Path
-                            d={ribbonPaths.flow2}
-                            fill="none"
-                            stroke="url(#blueAccent)"
-                            strokeWidth="2.5"
-                            strokeLinecap="round"
-                            opacity={0.7}
-                        />
-
-                        {/* Accent ribbon - warm tones */}
-                        <Path
-                            d={ribbonPaths.accent1}
-                            fill="none"
-                            stroke="url(#warmAccent)"
-                            strokeWidth="2"
-                            strokeLinecap="round"
-                            opacity={0.6}
-                        />
-
-                        {/* Inner definition ribbon */}
-                        <Path
-                            d={ribbonPaths.inner1}
-                            fill="none"
-                            stroke="url(#glassHighlight)"
-                            strokeWidth="1.5"
-                            strokeLinecap="round"
-                            opacity={0.5}
-                        />
-                    </G>
-
-                    {/* Glass reflections */}
-                    <Ellipse
-                        cx="38"
-                        cy="35"
-                        rx="15"
-                        ry="8"
-                        fill="url(#glassHighlight)"
-                        opacity={0.4}
-                    />
-
-                    <Ellipse
-                        cx="60"
-                        cy="65"
-                        rx="10"
-                        ry="5"
-                        fill={orbColors.glassWhite}
-                        opacity={0.2}
-                    />
-
-                    {/* Subtle outer ring */}
+                    {/* Glass depth layer */}
                     <Circle
                         cx="50"
                         cy="50"
-                        r="47"
+                        r="44"
+                        fill="url(#glassDepth)"
+                    />
+
+                    {/* Inner glow - creates depth */}
+                    <Circle
+                        cx="50"
+                        cy="50"
+                        r="30"
+                        fill="url(#innerGlow)"
+                    />
+
+                    {/* Rim light - edge definition */}
+                    <Circle
+                        cx="50"
+                        cy="50"
+                        r="46"
+                        fill="url(#rimLight)"
+                    />
+
+
+
+                    {/* Primary glass highlight - top left */}
+                    <Ellipse
+                        cx="35"
+                        cy="32"
+                        rx="18"
+                        ry="10"
+                        fill="url(#topHighlight)"
+                        opacity={0.7}
+                    />
+
+                    {/* Secondary glass highlight - smaller */}
+                    <Ellipse
+                        cx="30"
+                        cy="28"
+                        rx="8"
+                        ry="4"
+                        fill="white"
+                        opacity={0.4}
+                    />
+
+                    {/* Bottom reflection - subtle */}
+                    <Ellipse
+                        cx="62"
+                        cy="68"
+                        rx="12"
+                        ry="6"
+                        fill="url(#secondaryHighlight)"
+                        opacity={0.5}
+                    />
+
+                    {/* Subtle inner ring for depth */}
+                    <Circle
+                        cx="50"
+                        cy="50"
+                        r="35"
                         fill="none"
                         stroke={orbColors.lightPurple}
-                        strokeWidth="0.5"
-                        opacity={0.3}
+                        strokeWidth="0.3"
+                        opacity={0.2}
                     />
+
+
                 </Svg>
             </Animated.View>
         </View>
