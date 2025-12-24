@@ -66,14 +66,6 @@ function RootLayoutNav() {
         }}
       >
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen
-          name="modal"
-          options={{
-            presentation: 'modal',
-            title: 'Modal',
-            animation: 'slide_from_bottom',
-          }}
-        />
       </Stack>
       <StatusBar style={theme.isDark ? 'light' : 'dark'} />
     </View>

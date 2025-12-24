@@ -33,18 +33,6 @@ export default function TabLayout() {
       }}
     >
       <Tabs.Screen
-        name="index"
-        options={{
-          href: null, // Hide from tabs - we'll use artemis as home
-        }}
-      />
-      <Tabs.Screen
-        name="explore"
-        options={{
-          href: null, // Hide from tabs
-        }}
-      />
-      <Tabs.Screen
         name="artemis"
         options={{
           title: 'Artemis',
