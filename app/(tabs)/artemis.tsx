@@ -1,50 +1,20 @@
 /**
  * Artemis Main Screen
  * The heart of the app - voice/chat interface with the AI assistant
- * Layout: 60% orb (top) / 40% chat (bottom)
+ * Layout: 55% orb (top) / 45% chat (bottom)
+ * Now powered by MCP events
  */
 
 import React, { useCallback, useEffect, useState } from 'react';
-import { Dimensions, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { ArtemisOrb, ChatArea, IntroBoot, MicButton, VoiceWaveform } from '@/components/artemis';
-import { useArtemisStore, useConversationStore, useSettingsStore } from '@/src/state';
+import { ArtemisOrb, ChatArea, IntroBoot, MicButton, ReasoningOverlay, VoiceWaveform } from '@/components/artemis';
+import { mockEvents, processMCPEvent } from '@/src/mcp';
+import { useArtemisStore, useConversationStore, useReasoningStore, useSettingsStore } from '@/src/state';
 import { useTheme } from '@/src/theme';
 
-const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 const ORB_SIZE = 180;
-
-// Fake conversation responses for demo
-const DEMO_RESPONSES: Record<string, { response: string; suggestion?: { content: string; actionType: 'device' | 'automation' | 'function'; targetId: string } }> = {
-    default: {
-        response: "I understand. How can I help you with that?",
-    },
-    light: {
-        response: "I can help with that!",
-        suggestion: {
-            content: "Would you like me to turn on the lights?",
-            actionType: 'device',
-            targetId: 'light-living-room',
-        },
-    },
-    dark: {
-        response: "I noticed it's getting dark.",
-        suggestion: {
-            content: "Should I turn on the ambient lighting?",
-            actionType: 'device',
-            targetId: 'light-ambient',
-        },
-    },
-    hot: {
-        response: "I can adjust the temperature for you.",
-        suggestion: {
-            content: "Would you like me to turn on the fan?",
-            actionType: 'device',
-            targetId: 'fan-main',
-        },
-    },
-};
 
 export default function ArtemisScreen() {
     const { theme } = useTheme();
@@ -68,12 +38,12 @@ export default function ArtemisScreen() {
     // Artemis state
     const artemisState = useArtemisStore((s) => s.state);
     const goIdle = useArtemisStore((s) => s.goIdle);
-    const startResponding = useArtemisStore((s) => s.startResponding);
 
     // Conversation store
     const addUserMessage = useConversationStore((s) => s.addUserMessage);
-    const addAssistantMessage = useConversationStore((s) => s.addAssistantMessage);
-    const addSuggestion = useConversationStore((s) => s.addSuggestion);
+
+    // Reasoning store
+    const toggleReasoning = useReasoningStore((s) => s.toggleVisible);
 
     // Handle intro completion
     const handleIntroComplete = () => {
@@ -82,48 +52,10 @@ export default function ArtemisScreen() {
         goIdle();
     };
 
-    // Simulate conversation flow when PROCESSING ends
+    // Simulate MCP event flow when PROCESSING
     useEffect(() => {
         if (artemisState === 'PROCESSING') {
-            // Simulate thinking delay
-            const timer = setTimeout(() => {
-                simulateResponse();
-            }, 1500);
-            return () => clearTimeout(timer);
-        }
-    }, [artemisState]);
-
-    // Simulate AI response
-    const simulateResponse = useCallback(() => {
-        // Pick a random response type
-        const types = Object.keys(DEMO_RESPONSES);
-        const randomType = types[Math.floor(Math.random() * types.length)];
-        const demo = DEMO_RESPONSES[randomType];
-
-        // Add assistant message
-        addAssistantMessage(demo.response);
-        startResponding(demo.response);
-
-        // If there's a suggestion, add it after a short delay
-        if (demo.suggestion) {
-            setTimeout(() => {
-                addSuggestion(demo.suggestion!.content, {
-                    actionType: demo.suggestion!.actionType,
-                    targetId: demo.suggestion!.targetId,
-                });
-            }, 800);
-        } else {
-            // No suggestion, go idle after speaking
-            setTimeout(() => {
-                goIdle();
-            }, 1500);
-        }
-    }, [addAssistantMessage, addSuggestion, startResponding, goIdle]);
-
-    // Handle mic release - add user message
-    useEffect(() => {
-        if (artemisState === 'PROCESSING') {
-            // Add fake user message when processing starts
+            // Add fake user message
             const fakeMessages = [
                 "Turn on the lights",
                 "It's getting hot in here",
@@ -132,8 +64,61 @@ export default function ArtemisScreen() {
             ];
             const randomMessage = fakeMessages[Math.floor(Math.random() * fakeMessages.length)];
             addUserMessage(randomMessage);
+
+            // Simulate MCP thought process
+            const thoughtTimer1 = setTimeout(() => {
+                processMCPEvent(mockEvents.thought('Analyzing user intent...', 0.7));
+            }, 300);
+
+            const thoughtTimer2 = setTimeout(() => {
+                processMCPEvent(mockEvents.thought(`Intent detected: "${randomMessage}"`, 0.85));
+            }, 700);
+
+            const thoughtTimer3 = setTimeout(() => {
+                processMCPEvent(mockEvents.thought('Searching for relevant devices and automations...', 0.9));
+            }, 1100);
+
+            // Simulate MCP response
+            const responseTimer = setTimeout(() => {
+                simulateMCPResponse(randomMessage);
+            }, 1500);
+
+            return () => {
+                clearTimeout(thoughtTimer1);
+                clearTimeout(thoughtTimer2);
+                clearTimeout(thoughtTimer3);
+                clearTimeout(responseTimer);
+            };
         }
     }, [artemisState]);
+
+    // Simulate MCP response based on user input
+    const simulateMCPResponse = useCallback((userInput: string) => {
+        const input = userInput.toLowerCase();
+
+        if (input.includes('light') || input.includes('dark')) {
+            processMCPEvent(mockEvents.message("I can help with the lighting!"));
+            setTimeout(() => {
+                processMCPEvent(mockEvents.suggestion(
+                    "Would you like me to turn on the lights?",
+                    'device',
+                    'light-living-room'
+                ));
+            }, 800);
+        } else if (input.includes('hot') || input.includes('temperature') || input.includes('fan')) {
+            processMCPEvent(mockEvents.message("I can adjust the temperature for you."));
+            setTimeout(() => {
+                processMCPEvent(mockEvents.suggestion(
+                    "Would you like me to turn on the fan?",
+                    'device',
+                    'fan-main'
+                ));
+            }, 800);
+        } else {
+            processMCPEvent(mockEvents.message("I understand. How can I help you with that?"));
+            setTimeout(() => goIdle(), 1500);
+        }
+    }, [goIdle]);
 
     // Get state label for display
     const getStateLabel = () => {
@@ -155,9 +140,15 @@ export default function ArtemisScreen() {
         setShowIntro(true);
     };
 
-    // Dev: Long press to clear conversation
+    // Dev: Long press to toggle reasoning panel
+    const handleToggleReasoning = () => {
+        toggleReasoning();
+    };
+
+    // Dev: Double tap to clear conversation
     const handleClearChat = () => {
         useConversationStore.getState().clearConversation();
+        useReasoningStore.getState().clearThoughts();
     };
 
     return (
@@ -177,7 +168,11 @@ export default function ArtemisScreen() {
             )}
 
             {/* Header - minimal */}
-            <Pressable onPress={handleReplayIntro} onLongPress={handleClearChat}>
+            <Pressable
+                onPress={handleToggleReasoning}
+                onLongPress={handleClearChat}
+                delayLongPress={1000}
+            >
                 <View style={styles.header}>
                     <Text
                         style={[
@@ -191,6 +186,14 @@ export default function ArtemisScreen() {
                     >
                         Artemis
                     </Text>
+                    <Text
+                        style={[
+                            styles.headerHint,
+                            { color: colors.text.tertiary }
+                        ]}
+                    >
+                        tap for insight
+                    </Text>
                 </View>
             </Pressable>
 
@@ -200,9 +203,11 @@ export default function ArtemisScreen() {
                 <VoiceWaveform orbSize={ORB_SIZE} />
 
                 {/* Orb */}
-                <View style={styles.orbWrapper}>
-                    <ArtemisOrb size={ORB_SIZE} />
-                </View>
+                <Pressable onPress={handleReplayIntro}>
+                    <View style={styles.orbWrapper}>
+                        <ArtemisOrb size={ORB_SIZE} />
+                    </View>
+                </Pressable>
 
                 {/* State indicator */}
                 <Text
@@ -260,6 +265,9 @@ export default function ArtemisScreen() {
                     />
                 </View>
             </View>
+
+            {/* Reasoning Overlay */}
+            <ReasoningOverlay />
         </View>
     );
 }
@@ -275,6 +283,11 @@ const styles = StyleSheet.create({
     },
     headerTitle: {
         opacity: 0.9,
+    },
+    headerHint: {
+        fontSize: 10,
+        marginTop: 2,
+        opacity: 0.5,
     },
     orbArea: {
         flex: 0.55,

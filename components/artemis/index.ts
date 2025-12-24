@@ -8,6 +8,7 @@ export { ChatArea } from './ChatArea';
 export { IntroBoot } from './IntroBoot';
 export { MessageBubble } from './MessageBubble';
 export { MicButton } from './MicButton';
+export { ReasoningOverlay } from './ReasoningOverlay';
 export { SuggestionCard } from './SuggestionCard';
 export { SystemMessage } from './SystemMessage';
 export { VoiceWaveform } from './VoiceWaveform';

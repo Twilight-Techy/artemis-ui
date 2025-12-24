@@ -31,3 +31,12 @@ export {
     type SuggestionData
 } from './conversationStore';
 
+// Reasoning
+export {
+    selectIsReasoningVisible,
+    selectLatestThought,
+    selectThoughts,
+    useReasoningStore,
+    type Thought
+} from './reasoningStore';
+
