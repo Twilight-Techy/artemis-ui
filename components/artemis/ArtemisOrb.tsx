@@ -28,14 +28,13 @@ import Animated, {
     withTiming
 } from 'react-native-reanimated';
 import Svg, {
-    Circle,
     Defs,
     Ellipse,
     G,
     LinearGradient,
     Path,
     RadialGradient,
-    Stop,
+    Stop
 } from 'react-native-svg';
 
 import { stateToOrbBehavior, useArtemisStore } from '@/src/state';
@@ -112,12 +111,14 @@ export function ArtemisOrb({ size = 200, style }: ArtemisOrbProps) {
     const artemisState = useArtemisStore((s) => s.state);
     const voiceAmplitude = useArtemisStore((s) => s.voice.amplitude);
 
-    // Animation values
+    // Animation values - using refs for continuous values to persist across re-renders
     const breatheScale = useSharedValue(1);
-    const rotateAngle = useSharedValue(0);
+    const rotateAngle = useSharedValue(Math.random() * 360); // Random start to avoid reset feel
     const pulseOpacity = useSharedValue(0.6);
     const glowIntensity = useSharedValue(1);
     const ribbonOffset = useSharedValue(0);
+    const scaleX = useSharedValue(0.995 + Math.random() * 0.01); // Random start
+    const scaleY = useSharedValue(0.995 + Math.random() * 0.01); // Random start
 
     // Get orb behavior based on state
     const orbBehavior = useMemo(() => stateToOrbBehavior[artemisState], [artemisState]);
@@ -126,37 +127,61 @@ export function ArtemisOrb({ size = 200, style }: ArtemisOrbProps) {
     // Animation Effects based on State
     // ============================================================================
 
+    // Continuous animations - only run once on mount, never reset
     useEffect(() => {
-        // Cancel previous animations
+        // Extremely slow rotation - 10 minutes per full rotation
+        rotateAngle.value = withRepeat(
+            withTiming(360, { duration: 600000, easing: Easing.linear }),
+            -1,
+            false
+        );
+
+        // Extremely slow fluid oscillation - ~2 minute full cycle
+        scaleX.value = withRepeat(
+            withSequence(
+                withTiming(1.008, { duration: 40000, easing: Easing.inOut(Easing.ease) }),
+                withTiming(0.992, { duration: 45000, easing: Easing.inOut(Easing.ease) }),
+                withTiming(1.003, { duration: 35000, easing: Easing.inOut(Easing.ease) })
+            ),
+            -1,
+            true
+        );
+        scaleY.value = withRepeat(
+            withSequence(
+                withTiming(0.992, { duration: 42000, easing: Easing.inOut(Easing.ease) }),
+                withTiming(1.01, { duration: 40000, easing: Easing.inOut(Easing.ease) }),
+                withTiming(0.997, { duration: 38000, easing: Easing.inOut(Easing.ease) })
+            ),
+            -1,
+            true
+        );
+    }, []); // Empty dependency - only runs once on mount
+
+    // State-dependent animations - change based on Artemis state
+    useEffect(() => {
+        // Only cancel state-dependent animations
         cancelAnimation(breatheScale);
-        cancelAnimation(rotateAngle);
         cancelAnimation(pulseOpacity);
         cancelAnimation(glowIntensity);
-        cancelAnimation(ribbonOffset);
 
         switch (artemisState) {
             case 'IDLE':
                 // Slow, peaceful breathing
                 breatheScale.value = withRepeat(
                     withSequence(
-                        withTiming(1.05, { duration: 2000, easing: Easing.inOut(Easing.ease) }),
-                        withTiming(1, { duration: 2000, easing: Easing.inOut(Easing.ease) })
+                        withTiming(1.03, { duration: 2500, easing: Easing.inOut(Easing.ease) }),
+                        withTiming(1, { duration: 2500, easing: Easing.inOut(Easing.ease) })
                     ),
                     -1,
                     true
                 );
                 pulseOpacity.value = withRepeat(
                     withSequence(
-                        withTiming(0.8, { duration: 2000 }),
-                        withTiming(0.6, { duration: 2000 })
+                        withTiming(0.8, { duration: 2500 }),
+                        withTiming(0.6, { duration: 2500 })
                     ),
                     -1,
                     true
-                );
-                rotateAngle.value = withRepeat(
-                    withTiming(360, { duration: 60000, easing: Easing.linear }),
-                    -1,
-                    false
                 );
                 glowIntensity.value = withTiming(1, { duration: 500 });
                 break;
@@ -321,11 +346,11 @@ export function ArtemisOrb({ size = 200, style }: ArtemisOrbProps) {
     // ============================================================================
 
     const containerAnimatedStyle = useAnimatedStyle(() => ({
-        transform: [{ scale: breatheScale.value }],
-    }));
-
-    const rotatingGroupStyle = useAnimatedStyle(() => ({
-        transform: [{ rotate: `${rotateAngle.value}deg` }],
+        transform: [
+            { rotate: `${rotateAngle.value}deg` },
+            { scaleX: scaleX.value * breatheScale.value },
+            { scaleY: scaleY.value * breatheScale.value },
+        ],
     }));
 
     const glowAnimatedStyle = useAnimatedStyle(() => ({
@@ -370,132 +395,145 @@ export function ArtemisOrb({ size = 200, style }: ArtemisOrbProps) {
                     viewBox="0 0 100 100"
                 >
                     <Defs>
-                        {/* Main orb gradient - deep purple core */}
-                        <RadialGradient id="coreGradient" cx="50%" cy="50%" r="50%">
-                            <Stop offset="0%" stopColor={orbColors.lightPurple} stopOpacity="0.4" />
-                            <Stop offset="30%" stopColor={orbColors.mediumPurple} stopOpacity="0.6" />
-                            <Stop offset="60%" stopColor={orbColors.deepPurple} stopOpacity="0.85" />
-                            <Stop offset="100%" stopColor="#0D0815" stopOpacity="1" />
+                        {/* Fluid blob path - organic, irregular shape */}
+                        {/* Water-like core gradient */}
+                        <RadialGradient id="waterCore" cx="50%" cy="55%" r="55%">
+                            <Stop offset="0%" stopColor={orbColors.lightPurple} stopOpacity="0.2" />
+                            <Stop offset="20%" stopColor={orbColors.mediumPurple} stopOpacity="0.3" />
+                            <Stop offset="45%" stopColor={orbColors.deepPurple} stopOpacity="0.5" />
+                            <Stop offset="75%" stopColor="#1A1025" stopOpacity="0.75" />
+                            <Stop offset="100%" stopColor="#0D0815" stopOpacity="0.9" />
                         </RadialGradient>
 
-                        {/* Glass depth gradient - creates 3D sphere illusion */}
-                        <RadialGradient id="glassDepth" cx="35%" cy="35%" r="65%">
+                        {/* Edge glow gradient - brighter at edges */}
+                        <RadialGradient id="edgeGlow" cx="50%" cy="50%" r="50%">
+                            <Stop offset="70%" stopColor="transparent" stopOpacity="0" />
+                            <Stop offset="85%" stopColor={orbColors.lightPurple} stopOpacity="0.5" />
+                            <Stop offset="95%" stopColor={orbColors.mediumPurple} stopOpacity="0.8" />
+                            <Stop offset="100%" stopColor="white" stopOpacity="0.4" />
+                        </RadialGradient>
+
+                        {/* Refraction/depth layer */}
+                        <RadialGradient id="refraction" cx="40%" cy="40%" r="65%">
+                            <Stop offset="0%" stopColor="white" stopOpacity="0.15" />
+                            <Stop offset="35%" stopColor={orbColors.lightPurple} stopOpacity="0.1" />
+                            <Stop offset="100%" stopColor="transparent" stopOpacity="0" />
+                        </RadialGradient>
+
+                        {/* Inner depth glow */}
+                        <RadialGradient id="depthGlow" cx="50%" cy="55%" r="40%">
+                            <Stop offset="0%" stopColor={orbColors.lightPurple} stopOpacity="0.25" />
+                            <Stop offset="100%" stopColor="transparent" stopOpacity="0" />
+                        </RadialGradient>
+
+                        {/* Caustic highlight - purple tinted */}
+                        <RadialGradient id="caustic" cx="35%" cy="30%" r="35%">
                             <Stop offset="0%" stopColor={orbColors.lightPurple} stopOpacity="0.5" />
-                            <Stop offset="40%" stopColor={orbColors.mediumPurple} stopOpacity="0.2" />
+                            <Stop offset="50%" stopColor={orbColors.lightPurple} stopOpacity="0.2" />
                             <Stop offset="100%" stopColor="transparent" stopOpacity="0" />
                         </RadialGradient>
 
-                        {/* Inner glow - soft center light */}
-                        <RadialGradient id="innerGlow" cx="50%" cy="50%" r="40%">
-                            <Stop offset="0%" stopColor={orbColors.lightPurple} stopOpacity="0.7" />
-                            <Stop offset="50%" stopColor={orbColors.mediumPurple} stopOpacity="0.3" />
-                            <Stop offset="100%" stopColor="transparent" stopOpacity="0" />
-                        </RadialGradient>
-
-                        {/* Top highlight - glass reflection */}
-                        <LinearGradient id="topHighlight" x1="0%" y1="0%" x2="100%" y2="100%">
-                            <Stop offset="0%" stopColor="white" stopOpacity="0.5" />
-                            <Stop offset="30%" stopColor="white" stopOpacity="0.2" />
+                        {/* Surface highlight gradient - purple tinted */}
+                        <LinearGradient id="surfaceHighlight" x1="20%" y1="10%" x2="70%" y2="45%">
+                            <Stop offset="0%" stopColor={orbColors.lightPurple} stopOpacity="0.5" />
+                            <Stop offset="25%" stopColor={orbColors.lightPurple} stopOpacity="0.25" />
                             <Stop offset="100%" stopColor="transparent" stopOpacity="0" />
                         </LinearGradient>
 
-                        {/* Secondary highlight */}
-                        <LinearGradient id="secondaryHighlight" x1="100%" y1="100%" x2="0%" y2="0%">
-                            <Stop offset="0%" stopColor={orbColors.electricBlue} stopOpacity="0.3" />
-                            <Stop offset="50%" stopColor={orbColors.lightBlue} stopOpacity="0.1" />
-                            <Stop offset="100%" stopColor="transparent" stopOpacity="0" />
-                        </LinearGradient>
-
-                        {/* Edge rim light */}
-                        <RadialGradient id="rimLight" cx="50%" cy="50%" r="50%">
-                            <Stop offset="85%" stopColor="transparent" stopOpacity="0" />
-                            <Stop offset="95%" stopColor={orbColors.lightPurple} stopOpacity="0.4" />
-                            <Stop offset="100%" stopColor={orbColors.mediumPurple} stopOpacity="0.6" />
-                        </RadialGradient>
-
-                        {/* Subtle blue accent rim */}
-                        <RadialGradient id="blueRim" cx="70%" cy="70%" r="50%">
-                            <Stop offset="80%" stopColor="transparent" stopOpacity="0" />
-                            <Stop offset="100%" stopColor={orbColors.electricBlue} stopOpacity="0.3" />
+                        {/* Glassy edge gradient - seamless with orb */}
+                        <RadialGradient id="glassyEdge" cx="50%" cy="50%" r="50%">
+                            <Stop offset="75%" stopColor="transparent" stopOpacity="0" />
+                            <Stop offset="88%" stopColor={orbColors.mediumPurple} stopOpacity="0.4" />
+                            <Stop offset="95%" stopColor={orbColors.lightPurple} stopOpacity="0.6" />
+                            <Stop offset="100%" stopColor={orbColors.lightPurple} stopOpacity="0.3" />
                         </RadialGradient>
                     </Defs>
 
-                    {/* Base orb - dark core with gradient */}
-                    <Circle
-                        cx="50"
-                        cy="50"
-                        r="46"
-                        fill="url(#coreGradient)"
+                    {/* Glassy glowing edge - thick, blends with orb */}
+                    <Path
+                        d="M 50 4
+                           C 68 4, 82 10, 90 22
+                           C 98 34, 98 48, 96 58
+                           C 94 70, 86 82, 74 90
+                           C 62 98, 46 98, 34 94
+                           C 20 90, 10 80, 6 66
+                           C 2 52, 4 38, 12 26
+                           C 20 14, 34 4, 50 4
+                           Z"
+                        fill="url(#glassyEdge)"
                     />
 
-                    {/* Glass depth layer */}
-                    <Circle
-                        cx="50"
-                        cy="50"
-                        r="44"
-                        fill="url(#glassDepth)"
+                    {/* Organic blob shape - floating liquid form */}
+                    <Path
+                        d="M 50 4
+                           C 68 4, 82 10, 90 22
+                           C 98 34, 98 48, 96 58
+                           C 94 70, 86 82, 74 90
+                           C 62 98, 46 98, 34 94
+                           C 20 90, 10 80, 6 66
+                           C 2 52, 4 38, 12 26
+                           C 20 14, 34 4, 50 4
+                           Z"
+                        fill="url(#waterCore)"
                     />
 
-                    {/* Inner glow - creates depth */}
-                    <Circle
-                        cx="50"
-                        cy="50"
-                        r="30"
-                        fill="url(#innerGlow)"
+                    {/* Refraction layer - same blob shape */}
+                    <Path
+                        d="M 50 6
+                           C 66 6, 80 12, 88 23
+                           C 96 34, 96 47, 94 57
+                           C 92 68, 84 80, 73 88
+                           C 61 96, 47 96, 35 92
+                           C 22 88, 12 78, 8 65
+                           C 4 52, 6 39, 13 27
+                           C 21 15, 35 6, 50 6
+                           Z"
+                        fill="url(#refraction)"
                     />
 
-                    {/* Rim light - edge definition */}
-                    <Circle
-                        cx="50"
-                        cy="50"
-                        r="46"
-                        fill="url(#rimLight)"
+                    {/* Depth glow - inner */}
+                    <Path
+                        d="M 50 15
+                           C 62 15, 74 20, 80 30
+                           C 86 40, 86 52, 84 62
+                           C 82 72, 74 80, 64 85
+                           C 54 90, 44 90, 35 85
+                           C 25 80, 18 72, 16 62
+                           C 14 52, 16 40, 22 30
+                           C 28 20, 38 15, 50 15
+                           Z"
+                        fill="url(#depthGlow)"
                     />
 
-
-
-                    {/* Primary glass highlight - top left */}
+                    {/* Specular highlight - purple tinted */}
                     <Ellipse
-                        cx="35"
-                        cy="32"
-                        rx="18"
-                        ry="10"
-                        fill="url(#topHighlight)"
-                        opacity={0.7}
-                    />
-
-                    {/* Secondary glass highlight - smaller */}
-                    <Ellipse
-                        cx="30"
-                        cy="28"
-                        rx="8"
-                        ry="4"
-                        fill="white"
+                        cx="32"
+                        cy="22"
+                        rx="3"
+                        ry="1.5"
+                        fill={orbColors.lightPurple}
                         opacity={0.4}
                     />
 
-                    {/* Bottom reflection - subtle */}
+                    {/* Secondary specular - purple tinted */}
                     <Ellipse
-                        cx="62"
-                        cy="68"
-                        rx="12"
-                        ry="6"
-                        fill="url(#secondaryHighlight)"
-                        opacity={0.5}
+                        cx="44"
+                        cy="20"
+                        rx="2"
+                        ry="1"
+                        fill={orbColors.lightPurple}
+                        opacity={0.25}
                     />
 
-                    {/* Subtle inner ring for depth */}
-                    <Circle
-                        cx="50"
-                        cy="50"
-                        r="35"
-                        fill="none"
-                        stroke={orbColors.lightPurple}
-                        strokeWidth="0.3"
-                        opacity={0.2}
+                    {/* Bottom internal reflection */}
+                    <Ellipse
+                        cx="60"
+                        cy="75"
+                        rx="14"
+                        ry="8"
+                        fill={orbColors.lightPurple}
+                        opacity={0.12}
                     />
-
-
                 </Svg>
             </Animated.View>
         </View>
