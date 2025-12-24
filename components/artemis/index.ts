@@ -4,3 +4,7 @@
  */
 
 export { ArtemisOrb } from './ArtemisOrb';
+export { IntroBoot } from './IntroBoot';
+export { MicButton } from './MicButton';
+export { VoiceWaveform } from './VoiceWaveform';
+

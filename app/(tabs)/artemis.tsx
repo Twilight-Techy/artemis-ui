@@ -3,29 +3,43 @@
  * The heart of the app - voice/chat interface with the AI assistant
  */
 
+import React, { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { ArtemisOrb } from '@/components/artemis';
-import { useArtemisStore } from '@/src/state';
+import { ArtemisOrb, IntroBoot, MicButton, VoiceWaveform } from '@/components/artemis';
+import { useArtemisStore, useSettingsStore } from '@/src/state';
 import { useTheme } from '@/src/theme';
+
+const ORB_SIZE = 200;
 
 export default function ArtemisScreen() {
     const { theme } = useTheme();
-    const { colors, typography, spacing } = theme;
+    const { colors, typography } = theme;
     const insets = useSafeAreaInsets();
+
+    // Settings state
+    const hasSeenIntro = useSettingsStore((s) => s.hasSeenIntro);
+    const setHasSeenIntro = useSettingsStore((s) => s.setHasSeenIntro);
+
+    // Local state for intro
+    const [showIntro, setShowIntro] = useState(!hasSeenIntro);
 
     // Artemis state
     const artemisState = useArtemisStore((s) => s.state);
-    const startListening = useArtemisStore((s) => s.startListening);
-    const cancelListening = useArtemisStore((s) => s.cancelListening);
-    const stopListening = useArtemisStore((s) => s.stopListening);
     const goIdle = useArtemisStore((s) => s.goIdle);
+
+    // Handle intro completion
+    const handleIntroComplete = () => {
+        setHasSeenIntro(true);
+        setShowIntro(false);
+        goIdle();
+    };
 
     // Get state label for display
     const getStateLabel = () => {
         switch (artemisState) {
-            case 'IDLE': return 'Tap to speak';
+            case 'IDLE': return 'Hold mic to speak';
             case 'LISTENING': return 'Listening...';
             case 'PROCESSING': return 'Thinking...';
             case 'RESPONDING': return 'Speaking...';
@@ -36,58 +50,21 @@ export default function ArtemisScreen() {
         }
     };
 
-    // Handle orb tap
-    const handleOrbPress = () => {
-        switch (artemisState) {
-            case 'IDLE':
-                startListening();
-                break;
-            case 'LISTENING':
-                // For demo: simulate stopping with a test message
-                stopListening("It's getting hot in here");
-                break;
-            case 'PROCESSING':
-                // Can't interrupt processing
-                break;
-            case 'RESPONDING':
-                // Could skip TTS
-                goIdle();
-                break;
-            case 'SUGGESTING':
-                // Tap elsewhere to dismiss, handled by suggestion cards
-                break;
-            case 'EXECUTING':
-                // Can't interrupt execution
-                break;
-            case 'OFFLINE':
-                // Maybe show retry
-                break;
-        }
-    };
-
-    // Demo: cycle through states for testing
+    // Demo: cycle through states for testing (long press on orb)
     const handleLongPress = () => {
         const states: Array<'IDLE' | 'LISTENING' | 'PROCESSING' | 'RESPONDING' | 'SUGGESTING' | 'EXECUTING' | 'OFFLINE'> = [
             'IDLE', 'LISTENING', 'PROCESSING', 'RESPONDING', 'SUGGESTING', 'EXECUTING', 'OFFLINE'
         ];
         const currentIndex = states.indexOf(artemisState);
         const nextIndex = (currentIndex + 1) % states.length;
-
-        // Use store methods where possible
         const nextState = states[nextIndex];
-        switch (nextState) {
-            case 'IDLE':
-                goIdle();
-                break;
-            case 'LISTENING':
-                if (artemisState === 'IDLE') startListening();
-                break;
-            case 'OFFLINE':
-                useArtemisStore.getState().setOffline(true);
-                break;
-            default:
-                // For demo, directly set state
-                useArtemisStore.setState({ state: nextState, previousState: artemisState });
+
+        if (nextState === 'IDLE') {
+            goIdle();
+        } else if (nextState === 'OFFLINE') {
+            useArtemisStore.getState().setOffline(true);
+        } else {
+            useArtemisStore.setState({ state: nextState, previousState: artemisState });
         }
     };
 
@@ -102,6 +79,11 @@ export default function ArtemisScreen() {
                 }
             ]}
         >
+            {/* Intro Boot Sequence */}
+            {showIntro && (
+                <IntroBoot onComplete={handleIntroComplete} />
+            )}
+
             {/* Header - minimal */}
             <View style={styles.header}>
                 <Text
@@ -120,12 +102,15 @@ export default function ArtemisScreen() {
 
             {/* Main Orb Area */}
             <View style={styles.orbArea}>
+                {/* Waveform ring (behind orb) */}
+                <VoiceWaveform orbSize={ORB_SIZE} />
+
+                {/* Orb */}
                 <Pressable
-                    onPress={handleOrbPress}
                     onLongPress={handleLongPress}
                     style={styles.orbPressable}
                 >
-                    <ArtemisOrb size={220} />
+                    <ArtemisOrb size={ORB_SIZE} />
                 </Pressable>
 
                 {/* State indicator */}
@@ -141,6 +126,11 @@ export default function ArtemisScreen() {
                 >
                     {getStateLabel()}
                 </Text>
+
+                {/* Mic Button */}
+                <View style={styles.micContainer}>
+                    <MicButton size={64} />
+                </View>
 
                 {/* Current state badge (for development) */}
                 <View
@@ -164,7 +154,7 @@ export default function ArtemisScreen() {
                 </View>
             </View>
 
-            {/* Chat area (placeholder for now) */}
+            {/* Chat area placeholder */}
             <View style={[styles.chatArea, { backgroundColor: colors.background.secondary }]}>
                 <Text
                     style={{
@@ -189,7 +179,7 @@ export default function ArtemisScreen() {
                     }
                 ]}
             >
-                Tap orb to speak • Long press to cycle states (dev)
+                Hold mic button to speak • Long press orb to cycle states (dev)
             </Text>
         </View>
     );
@@ -221,8 +211,11 @@ const styles = StyleSheet.create({
         marginTop: 24,
         opacity: 0.8,
     },
+    micContainer: {
+        marginTop: 32,
+    },
     stateBadge: {
-        marginTop: 12,
+        marginTop: 20,
         paddingHorizontal: 12,
         paddingVertical: 6,
         borderRadius: 12,
@@ -233,7 +226,7 @@ const styles = StyleSheet.create({
         marginBottom: 16,
         padding: 20,
         borderRadius: 16,
-        minHeight: 120,
+        minHeight: 100,
         alignItems: 'center',
         justifyContent: 'center',
     },

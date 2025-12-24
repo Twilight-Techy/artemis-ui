@@ -59,6 +59,7 @@ interface SettingsStoreState {
 
     // Onboarding
     hasCompletedOnboarding: boolean;
+    hasSeenIntro: boolean;
 
     // App info
     appVersion: string;
@@ -95,6 +96,9 @@ interface SettingsStoreActions {
     // Onboarding
     completeOnboarding: () => void;
     resetOnboarding: () => void;
+
+    // Intro
+    setHasSeenIntro: (seen: boolean) => void;
 
     // Reset all settings
     resetToDefaults: () => void;
@@ -139,6 +143,7 @@ const initialState: SettingsStoreState = {
     behavior: defaultBehaviorSettings,
     transparency: defaultTransparencySettings,
     hasCompletedOnboarding: false,
+    hasSeenIntro: false,
     appVersion: '1.0.0',
 };
 
@@ -257,6 +262,10 @@ export const useSettingsStore = create<SettingsStore>()(
             resetOnboarding: () =>
                 set({ hasCompletedOnboarding: false }),
 
+            // Intro
+            setHasSeenIntro: (seen) =>
+                set({ hasSeenIntro: seen }),
+
             // Reset to defaults
             resetToDefaults: () =>
                 set({
@@ -275,6 +284,7 @@ export const useSettingsStore = create<SettingsStore>()(
                 behavior: state.behavior,
                 transparency: state.transparency,
                 hasCompletedOnboarding: state.hasCompletedOnboarding,
+                hasSeenIntro: state.hasSeenIntro,
             }),
         }
     )
@@ -289,3 +299,4 @@ export const selectPrivacySettings = (state: SettingsStore) => state.privacy;
 export const selectBehaviorSettings = (state: SettingsStore) => state.behavior;
 export const selectTransparencySettings = (state: SettingsStore) => state.transparency;
 export const selectHasCompletedOnboarding = (state: SettingsStore) => state.hasCompletedOnboarding;
+export const selectHasSeenIntro = (state: SettingsStore) => state.hasSeenIntro;
