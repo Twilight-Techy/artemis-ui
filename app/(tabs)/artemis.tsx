@@ -3,7 +3,7 @@
  * The heart of the app - voice/chat interface with the AI assistant
  */
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -22,8 +22,16 @@ export default function ArtemisScreen() {
     const hasSeenIntro = useSettingsStore((s) => s.hasSeenIntro);
     const setHasSeenIntro = useSettingsStore((s) => s.setHasSeenIntro);
 
-    // Local state for intro
-    const [showIntro, setShowIntro] = useState(!hasSeenIntro);
+    // Local state for intro - start with true (show intro), then check store
+    const [showIntro, setShowIntro] = useState(true);
+
+    // Wait for store to hydrate, then decide whether to show intro
+    useEffect(() => {
+        // If hasSeenIntro is true from persisted storage, skip intro
+        if (hasSeenIntro) {
+            setShowIntro(false);
+        }
+    }, [hasSeenIntro]);
 
     // Artemis state
     const artemisState = useArtemisStore((s) => s.state);
@@ -68,6 +76,12 @@ export default function ArtemisScreen() {
         }
     };
 
+    // Dev: Replay intro when header is tapped
+    const handleReplayIntro = () => {
+        setHasSeenIntro(false);
+        setShowIntro(true);
+    };
+
     return (
         <View
             style={[
@@ -85,20 +99,22 @@ export default function ArtemisScreen() {
             )}
 
             {/* Header - minimal */}
-            <View style={styles.header}>
-                <Text
-                    style={[
-                        styles.headerTitle,
-                        {
-                            color: colors.text.primary,
-                            fontFamily: typography.fonts.heading.semiBold,
-                            fontSize: typography.sizes.lg,
-                        }
-                    ]}
-                >
-                    Artemis
-                </Text>
-            </View>
+            <Pressable onPress={handleReplayIntro}>
+                <View style={styles.header}>
+                    <Text
+                        style={[
+                            styles.headerTitle,
+                            {
+                                color: colors.text.primary,
+                                fontFamily: typography.fonts.heading.semiBold,
+                                fontSize: typography.sizes.lg,
+                            }
+                        ]}
+                    >
+                        Artemis
+                    </Text>
+                </View>
+            </Pressable>
 
             {/* Main Orb Area */}
             <View style={styles.orbArea}>
@@ -179,7 +195,7 @@ export default function ArtemisScreen() {
                     }
                 ]}
             >
-                Hold mic button to speak • Long press orb to cycle states (dev)
+                Hold mic to speak • Tap header to replay intro • Long press orb to cycle states
             </Text>
         </View>
     );
