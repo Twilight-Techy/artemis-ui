@@ -18,6 +18,16 @@ export {
 
 // User settings
 export {
-    selectBehaviorSettings, selectHasCompletedOnboarding, selectPrivacySettings, selectTransparencySettings, selectVoiceSettings, useSettingsStore, type ApprovalMode, type BehaviorSettings, type PrivacySettings, type TransparencySettings, type VoiceSettings
+    selectBehaviorSettings, selectHasCompletedOnboarding, selectHasSeenIntro, selectPrivacySettings, selectTransparencySettings, selectVoiceSettings, useSettingsStore, type ApprovalMode, type BehaviorSettings, type PrivacySettings, type TransparencySettings, type VoiceSettings
 } from './settingsStore';
+
+// Conversation
+export {
+    selectMessages as selectConversationMessages,
+    selectPendingSuggestion,
+    useConversationStore,
+    type ConversationMessage,
+    type MessageType as ConversationMessageType,
+    type SuggestionData
+} from './conversationStore';
 

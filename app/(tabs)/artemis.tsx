@@ -1,17 +1,50 @@
 /**
  * Artemis Main Screen
  * The heart of the app - voice/chat interface with the AI assistant
+ * Layout: 60% orb (top) / 40% chat (bottom)
  */
 
-import React, { useEffect, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import React, { useCallback, useEffect, useState } from 'react';
+import { Dimensions, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { ArtemisOrb, IntroBoot, MicButton, VoiceWaveform } from '@/components/artemis';
-import { useArtemisStore, useSettingsStore } from '@/src/state';
+import { ArtemisOrb, ChatArea, IntroBoot, MicButton, VoiceWaveform } from '@/components/artemis';
+import { useArtemisStore, useConversationStore, useSettingsStore } from '@/src/state';
 import { useTheme } from '@/src/theme';
 
-const ORB_SIZE = 200;
+const { height: SCREEN_HEIGHT } = Dimensions.get('window');
+const ORB_SIZE = 180;
+
+// Fake conversation responses for demo
+const DEMO_RESPONSES: Record<string, { response: string; suggestion?: { content: string; actionType: 'device' | 'automation' | 'function'; targetId: string } }> = {
+    default: {
+        response: "I understand. How can I help you with that?",
+    },
+    light: {
+        response: "I can help with that!",
+        suggestion: {
+            content: "Would you like me to turn on the lights?",
+            actionType: 'device',
+            targetId: 'light-living-room',
+        },
+    },
+    dark: {
+        response: "I noticed it's getting dark.",
+        suggestion: {
+            content: "Should I turn on the ambient lighting?",
+            actionType: 'device',
+            targetId: 'light-ambient',
+        },
+    },
+    hot: {
+        response: "I can adjust the temperature for you.",
+        suggestion: {
+            content: "Would you like me to turn on the fan?",
+            actionType: 'device',
+            targetId: 'fan-main',
+        },
+    },
+};
 
 export default function ArtemisScreen() {
     const { theme } = useTheme();
@@ -22,12 +55,11 @@ export default function ArtemisScreen() {
     const hasSeenIntro = useSettingsStore((s) => s.hasSeenIntro);
     const setHasSeenIntro = useSettingsStore((s) => s.setHasSeenIntro);
 
-    // Local state for intro - start with true (show intro), then check store
+    // Local state for intro
     const [showIntro, setShowIntro] = useState(true);
 
-    // Wait for store to hydrate, then decide whether to show intro
+    // Wait for store to hydrate
     useEffect(() => {
-        // If hasSeenIntro is true from persisted storage, skip intro
         if (hasSeenIntro) {
             setShowIntro(false);
         }
@@ -36,6 +68,12 @@ export default function ArtemisScreen() {
     // Artemis state
     const artemisState = useArtemisStore((s) => s.state);
     const goIdle = useArtemisStore((s) => s.goIdle);
+    const startResponding = useArtemisStore((s) => s.startResponding);
+
+    // Conversation store
+    const addUserMessage = useConversationStore((s) => s.addUserMessage);
+    const addAssistantMessage = useConversationStore((s) => s.addAssistantMessage);
+    const addSuggestion = useConversationStore((s) => s.addSuggestion);
 
     // Handle intro completion
     const handleIntroComplete = () => {
@@ -43,6 +81,59 @@ export default function ArtemisScreen() {
         setShowIntro(false);
         goIdle();
     };
+
+    // Simulate conversation flow when PROCESSING ends
+    useEffect(() => {
+        if (artemisState === 'PROCESSING') {
+            // Simulate thinking delay
+            const timer = setTimeout(() => {
+                simulateResponse();
+            }, 1500);
+            return () => clearTimeout(timer);
+        }
+    }, [artemisState]);
+
+    // Simulate AI response
+    const simulateResponse = useCallback(() => {
+        // Pick a random response type
+        const types = Object.keys(DEMO_RESPONSES);
+        const randomType = types[Math.floor(Math.random() * types.length)];
+        const demo = DEMO_RESPONSES[randomType];
+
+        // Add assistant message
+        addAssistantMessage(demo.response);
+        startResponding(demo.response);
+
+        // If there's a suggestion, add it after a short delay
+        if (demo.suggestion) {
+            setTimeout(() => {
+                addSuggestion(demo.suggestion!.content, {
+                    actionType: demo.suggestion!.actionType,
+                    targetId: demo.suggestion!.targetId,
+                });
+            }, 800);
+        } else {
+            // No suggestion, go idle after speaking
+            setTimeout(() => {
+                goIdle();
+            }, 1500);
+        }
+    }, [addAssistantMessage, addSuggestion, startResponding, goIdle]);
+
+    // Handle mic release - add user message
+    useEffect(() => {
+        if (artemisState === 'PROCESSING') {
+            // Add fake user message when processing starts
+            const fakeMessages = [
+                "Turn on the lights",
+                "It's getting hot in here",
+                "What's the weather like?",
+                "Set a reminder for tomorrow",
+            ];
+            const randomMessage = fakeMessages[Math.floor(Math.random() * fakeMessages.length)];
+            addUserMessage(randomMessage);
+        }
+    }, [artemisState]);
 
     // Get state label for display
     const getStateLabel = () => {
@@ -58,28 +149,15 @@ export default function ArtemisScreen() {
         }
     };
 
-    // Demo: cycle through states for testing (long press on orb)
-    const handleLongPress = () => {
-        const states: Array<'IDLE' | 'LISTENING' | 'PROCESSING' | 'RESPONDING' | 'SUGGESTING' | 'EXECUTING' | 'OFFLINE'> = [
-            'IDLE', 'LISTENING', 'PROCESSING', 'RESPONDING', 'SUGGESTING', 'EXECUTING', 'OFFLINE'
-        ];
-        const currentIndex = states.indexOf(artemisState);
-        const nextIndex = (currentIndex + 1) % states.length;
-        const nextState = states[nextIndex];
-
-        if (nextState === 'IDLE') {
-            goIdle();
-        } else if (nextState === 'OFFLINE') {
-            useArtemisStore.getState().setOffline(true);
-        } else {
-            useArtemisStore.setState({ state: nextState, previousState: artemisState });
-        }
-    };
-
     // Dev: Replay intro when header is tapped
     const handleReplayIntro = () => {
         setHasSeenIntro(false);
         setShowIntro(true);
+    };
+
+    // Dev: Long press to clear conversation
+    const handleClearChat = () => {
+        useConversationStore.getState().clearConversation();
     };
 
     return (
@@ -99,7 +177,7 @@ export default function ArtemisScreen() {
             )}
 
             {/* Header - minimal */}
-            <Pressable onPress={handleReplayIntro}>
+            <Pressable onPress={handleReplayIntro} onLongPress={handleClearChat}>
                 <View style={styles.header}>
                     <Text
                         style={[
@@ -116,18 +194,15 @@ export default function ArtemisScreen() {
                 </View>
             </Pressable>
 
-            {/* Main Orb Area */}
+            {/* Main Orb Area - 55% of remaining height */}
             <View style={styles.orbArea}>
                 {/* Waveform ring (behind orb) */}
                 <VoiceWaveform orbSize={ORB_SIZE} />
 
                 {/* Orb */}
-                <Pressable
-                    onLongPress={handleLongPress}
-                    style={styles.orbPressable}
-                >
+                <View style={styles.orbWrapper}>
                     <ArtemisOrb size={ORB_SIZE} />
-                </Pressable>
+                </View>
 
                 {/* State indicator */}
                 <Text
@@ -136,7 +211,7 @@ export default function ArtemisScreen() {
                         {
                             color: colors.text.secondary,
                             fontFamily: typography.fonts.body.regular,
-                            fontSize: typography.sizes.base,
+                            fontSize: typography.sizes.sm,
                         }
                     ]}
                 >
@@ -145,58 +220,22 @@ export default function ArtemisScreen() {
 
                 {/* Mic Button */}
                 <View style={styles.micContainer}>
-                    <MicButton size={64} />
-                </View>
-
-                {/* Current state badge (for development) */}
-                <View
-                    style={[
-                        styles.stateBadge,
-                        {
-                            backgroundColor: colors.background.secondary,
-                            borderColor: colors.border.subtle,
-                        }
-                    ]}
-                >
-                    <Text
-                        style={{
-                            color: colors.accent.secondary,
-                            fontFamily: typography.fonts.mono.regular,
-                            fontSize: typography.sizes.xs,
-                        }}
-                    >
-                        {artemisState}
-                    </Text>
+                    <MicButton size={56} />
                 </View>
             </View>
 
-            {/* Chat area placeholder */}
-            <View style={[styles.chatArea, { backgroundColor: colors.background.secondary }]}>
-                <Text
-                    style={{
-                        color: colors.text.tertiary,
-                        fontFamily: typography.fonts.body.regular,
-                        fontSize: typography.sizes.sm,
-                        textAlign: 'center',
-                    }}
-                >
-                    Chat messages will appear here
-                </Text>
-            </View>
-
-            {/* Quick instruction */}
-            <Text
+            {/* Chat Area - 45% of remaining height */}
+            <View
                 style={[
-                    styles.hint,
+                    styles.chatContainer,
                     {
-                        color: colors.text.tertiary,
-                        fontFamily: typography.fonts.body.regular,
-                        fontSize: typography.sizes.xs,
+                        backgroundColor: colors.background.secondary,
+                        borderTopColor: colors.border.subtle,
                     }
                 ]}
             >
-                Hold mic to speak • Tap header to replay intro • Long press orb to cycle states
-            </Text>
+                <ChatArea />
+            </View>
         </View>
     );
 }
@@ -207,48 +246,33 @@ const styles = StyleSheet.create({
     },
     header: {
         paddingHorizontal: 24,
-        paddingVertical: 16,
+        paddingVertical: 12,
         alignItems: 'center',
     },
     headerTitle: {
         opacity: 0.9,
     },
     orbArea: {
-        flex: 1,
+        flex: 0.55,
         alignItems: 'center',
         justifyContent: 'center',
-        paddingVertical: 20,
     },
-    orbPressable: {
+    orbWrapper: {
         alignItems: 'center',
         justifyContent: 'center',
     },
     stateLabel: {
-        marginTop: 24,
-        opacity: 0.8,
+        marginTop: 16,
+        opacity: 0.7,
     },
     micContainer: {
-        marginTop: 32,
-    },
-    stateBadge: {
         marginTop: 20,
-        paddingHorizontal: 12,
-        paddingVertical: 6,
-        borderRadius: 12,
-        borderWidth: 1,
     },
-    chatArea: {
-        marginHorizontal: 16,
-        marginBottom: 16,
-        padding: 20,
-        borderRadius: 16,
-        minHeight: 100,
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    hint: {
-        textAlign: 'center',
-        paddingBottom: 16,
-        opacity: 0.6,
+    chatContainer: {
+        flex: 0.45,
+        borderTopWidth: 1,
+        borderTopLeftRadius: 24,
+        borderTopRightRadius: 24,
+        overflow: 'hidden',
     },
 });
