@@ -224,17 +224,41 @@ export default function ArtemisScreen() {
                 </View>
             </View>
 
-            {/* Chat Area - 45% of remaining height */}
-            <View
-                style={[
-                    styles.chatContainer,
-                    {
-                        backgroundColor: colors.background.secondary,
-                        borderTopColor: colors.border.subtle,
-                    }
-                ]}
-            >
-                <ChatArea />
+            {/* Chat Area - 45% with glassmorphism */}
+            <View style={styles.chatOuterContainer}>
+                {/* Glass effect background */}
+                <View
+                    style={[
+                        styles.glassBackground,
+                        { backgroundColor: 'rgba(20, 15, 30, 0.7)' }
+                    ]}
+                />
+                {/* Subtle top glow */}
+                <View
+                    style={[
+                        styles.glassGlow,
+                        { backgroundColor: colors.glow.primary }
+                    ]}
+                />
+                {/* Glass border */}
+                <View
+                    style={[
+                        styles.glassBorder,
+                        { borderColor: 'rgba(139, 92, 199, 0.2)' }
+                    ]}
+                />
+                {/* Chat content */}
+                <View style={styles.chatContent}>
+                    <ChatArea />
+                    {/* Top fade for roll-out effect */}
+                    <View
+                        style={[
+                            styles.topFadeOverlay,
+                            { backgroundColor: 'rgba(20, 15, 30, 0.9)' }
+                        ]}
+                        pointerEvents="none"
+                    />
+                </View>
             </View>
         </View>
     );
@@ -268,11 +292,46 @@ const styles = StyleSheet.create({
     micContainer: {
         marginTop: 20,
     },
-    chatContainer: {
+    chatOuterContainer: {
         flex: 0.45,
-        borderTopWidth: 1,
-        borderTopLeftRadius: 24,
-        borderTopRightRadius: 24,
+        position: 'relative',
         overflow: 'hidden',
+    },
+    glassBackground: {
+        ...StyleSheet.absoluteFillObject,
+        borderTopLeftRadius: 28,
+        borderTopRightRadius: 28,
+    },
+    glassGlow: {
+        position: 'absolute',
+        top: 0,
+        left: '10%',
+        right: '10%',
+        height: 1,
+        opacity: 0.4,
+        borderRadius: 1,
+    },
+    glassBorder: {
+        ...StyleSheet.absoluteFillObject,
+        borderTopLeftRadius: 28,
+        borderTopRightRadius: 28,
+        borderWidth: 1,
+        borderBottomWidth: 0,
+        pointerEvents: 'none',
+    },
+    chatContent: {
+        flex: 1,
+        borderTopLeftRadius: 28,
+        borderTopRightRadius: 28,
+        overflow: 'hidden',
+    },
+    topFadeOverlay: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        height: 40,
+        borderTopLeftRadius: 28,
+        borderTopRightRadius: 28,
     },
 });
